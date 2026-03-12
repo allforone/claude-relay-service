@@ -70,7 +70,39 @@
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-500 dark:text-gray-400">测试模型</span>
-              <span class="font-medium text-gray-700 dark:text-gray-300">{{ testModel }}</span>
+              <span class="font-medium text-gray-700 dark:text-gray-300">{{
+                normalizedTestModel || '未设置'
+              }}</span>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              模型名称
+            </label>
+            <input
+              v-model="testModel"
+              class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500"
+              :disabled="testStatus === 'testing'"
+              placeholder="输入模型名称，例如 claude-sonnet-4-5-20250929"
+              type="text"
+            />
+            <div v-if="availableTestModels.length > 0" class="mt-2 flex flex-wrap gap-2">
+              <button
+                v-for="modelOption in availableTestModels"
+                :key="modelOption"
+                :class="[
+                  'rounded-lg border px-3 py-1.5 text-xs font-medium transition',
+                  normalizedTestModel === modelOption
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700',
+                  testStatus === 'testing' && 'cursor-not-allowed opacity-50'
+                ]"
+                :disabled="testStatus === 'testing'"
+                @click="testModel = modelOption"
+              >
+                {{ modelOption }}
+              </button>
             </div>
           </div>
 
@@ -200,8 +232,50 @@ const testDuration = ref(0)
 const testStartTime = ref(null)
 const eventSource = ref(null)
 
+const DEFAULT_TEST_MODEL = 'claude-sonnet-4-5-20250929'
+const FALLBACK_TEST_MODELS = [
+  'claude-sonnet-4-5-20250929',
+  'claude-haiku-4-5-20251001',
+  'claude-opus-4-5-20251101'
+]
+
+const normalizeSupportedModels = (account) => {
+  const models = account?.supportedModels
+  if (!models) return []
+
+  if (typeof models === 'object' && !Array.isArray(models)) {
+    return Object.keys(models).filter(Boolean)
+  }
+
+  if (Array.isArray(models)) {
+    return models.filter(Boolean)
+  }
+
+  return []
+}
+
+const resolveInitialTestModel = (account) => {
+  const defaultModel = account?.defaultModel?.trim()
+  if (defaultModel) return defaultModel
+
+  const supportedModels = normalizeSupportedModels(account)
+  if (supportedModels.length > 0) return supportedModels[0]
+
+  return DEFAULT_TEST_MODEL
+}
+
 // 测试模型
-const testModel = ref('claude-sonnet-4-5-20250929')
+const testModel = ref(resolveInitialTestModel(props.account))
+const normalizedTestModel = computed(() => testModel.value.trim())
+const availableTestModels = computed(() => {
+  return [
+    ...new Set(
+      [normalizedTestModel.value, ...normalizeSupportedModels(props.account), ...FALLBACK_TEST_MODELS]
+        .map((model) => model?.trim())
+        .filter(Boolean)
+    )
+  ]
+})
 
 // 计算属性
 const platformLabel = computed(() => {
@@ -351,6 +425,13 @@ function getTestEndpoint() {
 
 async function startTest() {
   if (!props.account) return
+  if (!normalizedTestModel.value) {
+    testStatus.value = 'error'
+    errorMessage.value = '请输入模型名称'
+    responseText.value = ''
+    testDuration.value = 0
+    return
+  }
 
   // 重置状态
   testStatus.value = 'testing'
@@ -382,7 +463,7 @@ async function startTest() {
         'Content-Type': 'application/json',
         Authorization: authToken ? `Bearer ${authToken}` : ''
       },
-      body: JSON.stringify({ model: testModel.value })
+      body: JSON.stringify({ model: normalizedTestModel.value })
     })
 
     if (!response.ok) {
@@ -474,6 +555,7 @@ watch(
   () => props.show,
   (newVal) => {
     if (newVal) {
+      testModel.value = resolveInitialTestModel(props.account)
       testStatus.value = 'idle'
       responseText.value = ''
       errorMessage.value = ''
