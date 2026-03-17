@@ -261,7 +261,8 @@ const handleResponses = async (req, res) => {
 
     // 判断是否为 Codex CLI 的请求（基于 User-Agent）
     const userAgent = req.headers['user-agent'] || ''
-    const codexCliPattern = /^(codex_vscode|codex_cli_rs)\/[\d.]+/i
+    const codexCliPattern =
+      /^(codex_vscode|codex_cli_rs|codex_exec|codex-tui|Codex Desktop)\/[\d.]+/i
     const isCodexCLI = codexCliPattern.test(userAgent)
 
     // 如果不是 Codex CLI 请求，则进行适配

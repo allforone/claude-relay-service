@@ -43,8 +43,10 @@ class CodexCliValidator {
       // - codex_vscode/0.35.0 (Windows 10.0.26100; x86_64) unknown (Cursor; 0.4.10)
       // - codex_cli_rs/0.38.0 (Ubuntu 22.4.0; x86_64) WindowsTerminal
       // - codex_exec/0.38.0 (Ubuntu 22.4.0; x86_64) WindowsTerminal
+      // - codex-tui/0.115.0 (Ubuntu 22.4.0; x86_64) WarpTerminal (codex-tui; 0.115.0)
       // - Codex Desktop/0.107.0 (Mac OS 26.3.0; arm64) unknown (Codex Desktop; 26.303.1606)
-      const codexCliPattern = /^(codex_vscode|codex_cli_rs|codex_exec|Codex Desktop)\/[\d.]+/i
+      const codexCliPattern =
+        /^(codex_vscode|codex_cli_rs|codex_exec|codex-tui|Codex Desktop)\/[\d.]+/i
       const uaMatch = userAgent.match(codexCliPattern)
 
       if (!uaMatch) {
@@ -74,18 +76,19 @@ class CodexCliValidator {
       // - codex_exec -> codex_exec
       // - Codex Desktop -> codex_desktop（兼容处理）
       const allowedOriginators = {
-        codex_vscode: 'codex_vscode',
-        codex_cli_rs: 'codex_cli_rs',
-        codex_exec: 'codex_exec',
-        'codex desktop': 'codex_desktop'
+        codex_vscode: ['codex_vscode'],
+        codex_cli_rs: ['codex_cli_rs'],
+        codex_exec: ['codex_exec'],
+        'codex-tui': ['codex_tui', 'codex-tui'],
+        'codex desktop': ['codex_desktop']
       }
 
-      const expectedOriginator = allowedOriginators[clientType]
+      const expectedOriginators = allowedOriginators[clientType] || []
       const originatorLower = originator.toLowerCase()
 
       // 如果有 originator 头，验证是否匹配预期
       // 如果没有 originator 头（Codex Desktop 可能不发送），则跳过此检查
-      if (originator && originatorLower !== expectedOriginator) {
+      if (originator && !expectedOriginators.includes(originatorLower)) {
         // 对于 Codex Desktop，额外检查是否以 codex_ 开头（宽松匹配）
         if (clientType === 'codex desktop' && originatorLower.startsWith('codex_')) {
           logger.debug(`Codex Desktop detected with originator: ${originator}, allowing access`)
