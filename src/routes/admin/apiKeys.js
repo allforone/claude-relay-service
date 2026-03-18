@@ -129,7 +129,7 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
       isActive = '',
       models = '', // 模型筛选（逗号分隔）
       // 排序参数
-      sortBy = 'createdAt',
+      sortBy = 'lastUsedAt',
       sortOrder = 'desc',
       // 费用排序参数
       costTimeRange = '7days', // 费用排序的时间范围
@@ -156,7 +156,7 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
       'status',
       'cost'
     ]
-    const validSortBy = validSortFields.includes(sortBy) ? sortBy : 'createdAt'
+    const validSortBy = validSortFields.includes(sortBy) ? sortBy : 'lastUsedAt'
     const validSortOrder = ['asc', 'desc'].includes(sortOrder) ? sortOrder : 'desc'
 
     // 获取用户服务来补充owner信息

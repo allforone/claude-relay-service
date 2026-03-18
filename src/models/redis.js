@@ -314,7 +314,7 @@ class RedisClient {
       search = '',
       tag = '',
       isActive = '',
-      sortBy = 'createdAt',
+      sortBy = 'lastUsedAt',
       sortOrder = 'desc',
       excludeDeleted = true, // 默认排除已删除的 API Keys
       modelFilter = []

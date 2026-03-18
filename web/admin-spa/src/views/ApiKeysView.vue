@@ -2192,7 +2192,7 @@ const timeRangeDropdownOptions = computed(() => [
 const activeTab = ref('active')
 const deletedApiKeys = ref([])
 const deletedApiKeysLoading = ref(false)
-const apiKeysSortBy = ref('createdAt') // 默认排序为创建时间
+const apiKeysSortBy = ref('lastUsedAt') // 默认按最后使用时间倒序
 const apiKeysSortOrder = ref('desc')
 const expandedApiKeys = ref({})
 
@@ -2566,7 +2566,7 @@ const loadApiKeys = async (clearStatsCache = true) => {
     ]
     const effectiveSortBy = validSortFields.includes(apiKeysSortBy.value)
       ? apiKeysSortBy.value
-      : 'createdAt'
+      : 'lastUsedAt'
     params.set('sortBy', effectiveSortBy)
     params.set('sortOrder', apiKeysSortOrder.value)
 
@@ -2797,8 +2797,8 @@ const sortApiKeys = (field) => {
     apiKeysSortOrder.value = apiKeysSortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
     apiKeysSortBy.value = field
-    // 费用排序默认降序（高费用在前）
-    apiKeysSortOrder.value = field === 'cost' ? 'desc' : 'asc'
+    // 费用排序和最后使用时间默认降序
+    apiKeysSortOrder.value = ['cost', 'lastUsedAt'].includes(field) ? 'desc' : 'asc'
   }
 }
 
@@ -3507,7 +3507,7 @@ const handleTimeRangeChange = (value) => {
     const status = costSortStatus.value[value]
     if (!status || status.status !== 'ready') {
       // 索引未就绪，回退到默认排序
-      apiKeysSortBy.value = 'createdAt'
+      apiKeysSortBy.value = 'lastUsedAt'
       apiKeysSortOrder.value = 'desc'
       showToast('当前时间范围的费用排序索引未就绪，已切换到默认排序', 'info')
     }
