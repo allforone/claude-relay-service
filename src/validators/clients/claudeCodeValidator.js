@@ -123,25 +123,39 @@ class ClaudeCodeValidator {
   }
 
   /**
+   * 检查 User-Agent 是否匹配 Claude Code CLI
+   * @param {string} userAgent - 请求头中的 User-Agent
+   * @returns {boolean} 是否匹配
+   */
+  static matchesUserAgent(userAgent) {
+    return /^claude-cli\/\d+\.\d+\.\d+/i.test(userAgent || '')
+  }
+
+  /**
    * 验证请求是否来自 Claude Code CLI
    * @param {Object} req - Express 请求对象
+   * @param {Object} [options] - 校验选项
+   * @param {boolean} [options.strict=false] - 是否启用严格校验
    * @returns {boolean} 验证结果
    */
-  static validate(req) {
+  static validate(req, options = {}) {
     try {
       const userAgent = req.headers['user-agent'] || ''
       const path = req.path || ''
+      const strict = options === true ? true : Boolean(options?.strict)
 
-      const claudeCodePattern = /^claude-cli\/\d+\.\d+\.\d+/i
-
-      if (!claudeCodePattern.test(userAgent)) {
+      if (!this.matchesUserAgent(userAgent)) {
         // 不是 Claude Code 的请求，此验证器不处理
         return false
       }
 
+      if (!strict) {
+        logger.debug(`Claude Code detected for path: ${path}, allowing access`)
+        return true
+      }
+
       // 2. Claude Code 检测到，对于特定路径进行额外的严格验证
       if (!path.includes('messages')) {
-        // 其他路径，只要 User-Agent 匹配就认为是 Claude Code
         logger.debug(`Claude Code detected for path: ${path}, allowing access`)
         return true
       }
@@ -152,18 +166,12 @@ class ClaudeCodeValidator {
       //   return false
       // }
 
-      // 4. 检查必需的头部（值不为空即可）
+      // 4. 严格模式检查必需的头部
       const xApp = req.headers['x-app']
-      const anthropicBeta = req.headers['anthropic-beta']
       const anthropicVersion = req.headers['anthropic-version']
 
       if (!xApp || xApp.trim() === '') {
         logger.debug('Claude Code validation failed - missing or empty x-app header')
-        return false
-      }
-
-      if (!anthropicBeta || anthropicBeta.trim() === '') {
-        logger.debug('Claude Code validation failed - missing or empty anthropic-beta header')
         return false
       }
 
@@ -172,9 +180,13 @@ class ClaudeCodeValidator {
         return false
       }
 
-      logger.debug(
-        `Claude Code headers - x-app: ${xApp}, anthropic-beta: ${anthropicBeta}, anthropic-version: ${anthropicVersion}`
-      )
+      const anthropicBeta = req.headers['anthropic-beta']
+      if (typeof anthropicBeta === 'string' && anthropicBeta.trim() === '') {
+        logger.debug('Claude Code validation failed - anthropic-beta header is empty')
+        return false
+      }
+
+      logger.debug(`Claude Code headers - x-app: ${xApp}, anthropic-version: ${anthropicVersion}`)
 
       // 5. 验证 body 中的 metadata.user_id
       if (!req.body || !req.body.metadata || !req.body.metadata.user_id) {

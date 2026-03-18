@@ -534,7 +534,7 @@ const authenticateApiKey = async (req, res, next) => {
 
           // OR 逻辑：全局开启 或 API Key 级别限制为仅 claude_code
           if (globalClaudeCodeOnly || keyClaudeCodeOnly) {
-            const isClaudeCode = ClaudeCodeValidator.validate(req)
+            const isClaudeCode = ClaudeCodeValidator.validate(req, { strict: true })
 
             if (!isClaudeCode) {
               const clientIP = req.ip || req.connection?.remoteAddress || 'unknown'
